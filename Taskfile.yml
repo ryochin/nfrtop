@@ -1,0 +1,77 @@
+version: "3"
+
+vars:
+  TESTS: test_nfrtop.py
+  # The floor the README promises and .github/workflows/ci.yml enforces.
+  # Move this and you move all three.
+  MIN_PYTHON: "3.9"
+  # Same list as the ci.yml matrix.
+  PYTHON_VERSIONS: "3.9 3.10 3.11 3.12 3.13"
+  # Pinned so that a ruff release cannot turn a green tree red on its own.
+  # Same version as the one ci.yml installs.
+  RUFF: "ruff@0.16.6"
+
+tasks:
+  lint:
+    desc: Run ruff over both files (settings in ruff.toml)
+    aliases: [l]
+    cmd: uvx {{.RUFF}} check .
+    preconditions:
+      - sh: command -v uvx
+        msg: uv not found; install it (https://docs.astral.sh/uv/)
+
+  check:
+    desc: Lint, then run the test suite
+    aliases: [c]
+    cmds:
+      - task: lint
+      - task: test
+
+  test:
+    desc: Run the test suite
+    aliases: [t]
+    cmd: python3 {{.TESTS}}
+
+  test:verbose:
+    desc: Run the test suite, naming each test
+    aliases: [tv]
+    cmd: python3 {{.TESTS}} -v
+
+  test:min:
+    desc: Run the test suite on the oldest supported Python ({{.MIN_PYTHON}})
+    cmd: uv run --no-project --python {{.MIN_PYTHON}} python {{.TESTS}}
+    preconditions:
+      - sh: command -v uv
+        msg: uv not found; install it (https://docs.astral.sh/uv/)
+
+  test:matrix:
+    desc: Run the test suite on every Python the CI matrix covers
+    # nfrtop has no dependencies, so the only thing worth proving across
+    # versions is that the syntax and stdlib use stay within the floor.
+    cmds:
+      - for: { var: PYTHON_VERSIONS, split: " ", as: VERSION }
+        cmd: |
+          echo "=== Python {{.VERSION}} ==="
+          uv run --no-project --python {{.VERSION}} python {{.TESTS}}
+    preconditions:
+      - sh: command -v uv
+        msg: uv not found; install it (https://docs.astral.sh/uv/)
+
+  golden:
+    desc: Re-record the golden output files, then show what moved
+    # Read the diff line by line. Re-recording golden output is exactly the
+    # moment an intended change in spelling and an unintended dropped value
+    # stop being distinguishable, and --stat cannot tell them apart for you.
+    #
+    # The suite runs afterwards because re-recording always succeeds: it writes
+    # down whatever the code does now, including what it does wrongly, and the
+    # unit tests are what still has an opinion about that.
+    cmds:
+      - python3 {{.TESTS}} --update-golden
+      - git diff -- tests/golden
+      - python3 {{.TESTS}}
+
+  default:
+    cmds:
+      - task -l --sort=none
+    silent: true

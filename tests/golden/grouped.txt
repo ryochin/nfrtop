@@ -1,0 +1,32 @@
+NUM HNDL   PKTS    BYTES    PPS       RATE TARGET     PROT IN  OUT    SOURCE                   DEST          OPTIONS
+--------------------------------------------------------------------------------------------------------------------
+
+Chain input (inet filter, hook input, policy drop)
+  1    7   1.2K  83.5KiB  100.0   9.8KiB/s ACCEPT     *    lo  *      *                        *
+  2    8  98.8K  11.8MiB    0.0       0B/s ACCEPT     *    *   *      *                        *             ct state { established, relate…
+  3    9      9     780B    3.0     300B/s DROP       *    *   *      @blocked                 *             /* blocklist */
+  4   11     12     900B    0.0       0B/s ACCEPT     tcp  *   *      { 192.168.1.10, 192.168… *             tcp dport 22
+  5   12      0       0B    0.0       0B/s ACCEPT     icmp *   *      *                        *             icmp type echo-request
+  6   14      -        -      -          - -          *    *   *      *                        *             iifname vmap { eth0 : jump wan…
+  7   16      5     300B    0.0       0B/s ACCEPT     tcp  *   *      *                        *             ip saddr . tcp dport { 10.0.0.…
+  8   17      7     420B    0.0       0B/s QUEUE      *    *   *      *                        *             flags bypass to 0-3
+  9   18      2     120B    0.0       0B/s DROP       *    *   *      *                        *             log prefix "drop: "
+
+Chain forward (inet filter, hook forward, policy accept)
+  1   19    444 394.6KiB  200.0 195.3KiB/s helper     *    *   !=eth0 *                        2001:db8::/32
+  2   20      0       0B    0.0       0B/s REJECT     udp  *   *      *                        *             udp dport 53 reject-with icmpx…
+
+Chain wan (inet filter)
+  1   21      6     360B    0.0       0B/s RETURN     tcp  *   *      *                        *             tcp flags syn
+
+Chain helper (inet filter)
+  1   22      -        -      -          - ACCEPT     *    *   *      *                        *             counter name "hits"
+
+Chain postrouting (ip nat, hook postrouting, policy accept)
+  1    3     11   1.5KiB    1.0     500B/s MASQUERADE *    *   eth0   *                        *             fully-random
+
+Chain prerouting (ip nat, hook prerouting, policy accept)
+  1    4     33   2.0KiB    0.0       0B/s DNAT       tcp  *   *      *                        192.0.2.1     tcp dport 80 to:10.0.0.5 persi…
+  2    5      0       0B    0.0       0B/s REDIRECT   tcp  *   *      *                        *             tcp dport 8080 to:8080
+
+16 rules, 14 with anonymous counters | interval 2s

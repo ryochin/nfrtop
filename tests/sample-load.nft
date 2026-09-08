@@ -1,0 +1,70 @@
+# The synthetic fixture as a script nft will actually load.
+#
+# tests/sample.nft is a hand-written imitation of `nft -a -n list ruleset`: it
+# carries `# handle N` comments nft never reads back, and it references a named
+# counter it never declares. This file is the same ruleset written as input, so
+# a real nft can produce the JSON dump the tests parse. Chains are declared
+# before any rule jumps to one, and every counter keeps the value the fixture
+# has always had, because the golden rates are differences between them.
+#
+# Load it into a throwaway netns and dump it; see PLAN.md for the commands.
+
+flush ruleset
+
+table inet filter {
+	counter hits {
+	}
+
+	set blocked {
+		type ipv4_addr
+		flags interval
+		elements = { 192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24 }
+	}
+
+	chain input {
+		type filter hook input priority filter; policy drop;
+	}
+
+	chain forward {
+		type filter hook forward priority filter;
+		comment "transit"
+	}
+
+	chain wan {
+	}
+
+	chain helper {
+	}
+}
+
+table ip nat {
+	chain postrouting {
+		type nat hook postrouting priority srcnat; policy accept;
+	}
+
+	chain prerouting {
+		type nat hook prerouting priority dstnat; policy accept;
+	}
+}
+
+add rule inet filter input iifname "lo" counter packets 1024 bytes 65536 accept
+add rule inet filter input ct state established,related counter packets 98765 bytes 12345678 accept
+add rule inet filter input ip saddr @blocked counter packets 3 bytes 180 drop comment "blocklist"
+add rule inet filter input ip saddr { 192.168.1.10, 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14 } tcp dport 22 counter packets 12 bytes 900 accept
+add rule inet filter input meta l4proto icmp icmp type echo-request counter packets 0 bytes 0 accept
+add rule inet filter input iifname vmap { "eth0" : jump wan, "eth1" : jump wan }
+add rule inet filter input ip saddr . tcp dport { 10.0.0.1 . 80 } counter packets 5 bytes 300 accept
+add rule inet filter input counter packets 7 bytes 420 queue num 0-3 bypass
+add rule inet filter input log prefix "drop: " counter packets 2 bytes 120 drop
+
+add rule inet filter forward oifname != "eth0" ip6 daddr 2001:db8::/32 counter packets 44 bytes 4096 goto helper
+add rule inet filter forward udp dport 53 counter packets 0 bytes 0 reject with icmpx type admin-prohibited
+
+add rule inet filter wan tcp flags syn counter packets 6 bytes 360 return
+
+add rule inet filter helper counter name "hits" accept
+
+add rule ip nat postrouting oifname "eth0" counter packets 9 bytes 512 masquerade fully-random
+
+add rule ip nat prerouting ip daddr 192.0.2.1 tcp dport 80 counter packets 33 bytes 2048 dnat ip to 10.0.0.5 persistent
+add rule ip nat prerouting tcp dport 8080 counter packets 0 bytes 0 redirect to :8080

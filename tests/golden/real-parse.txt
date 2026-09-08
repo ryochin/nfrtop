@@ -1,0 +1,382 @@
+chain inet filter wan hook='' policy=''
+chain inet filter helper hook='' policy=''
+chain inet filter input hook='input' policy='drop'
+chain inet filter forward hook='forward' policy='accept'
+chain inet filter output hook='output' policy='accept'
+chain ip nat postrouting hook='postrouting' policy='accept'
+chain ip nat prerouting hook='prerouting' policy='accept'
+
+rule inet filter wan handle 8
+  num = 1
+  order = 0
+  hook = ''
+  target = 'RETURN'
+  proto = 'tcp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'tcp flags syn'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter helper handle 9
+  num = 1
+  order = 1
+  hook = ''
+  target = 'ACCEPT'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'counter name "hits"'
+  comment = ''
+  packets = None
+  bytes = None
+
+rule inet filter input handle 10
+  num = 1
+  order = 2
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = ''
+  iif = 'lo'
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = ''
+  comment = ''
+  packets = 6
+  bytes = 504
+
+rule inet filter input handle 11
+  num = 2
+  order = 3
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'ct state { established, related }'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 12
+  num = 3
+  order = 4
+  hook = 'input'
+  target = 'DROP'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = '@blocked'
+  daddr = ''
+  options = ''
+  comment = 'blocklist'
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 14
+  num = 4
+  order = 5
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = 'tcp'
+  iif = ''
+  oif = ''
+  saddr = '{ 192.168.1.10, 192.168.1.11, 192.168.1.12 }'
+  daddr = ''
+  options = 'tcp dport 22'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 15
+  num = 5
+  order = 6
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = 'icmp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'icmp type echo-request'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 17
+  num = 6
+  order = 7
+  hook = 'input'
+  target = ''
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'iifname vmap { eth0 : jump wan, eth1 : jump helper }'
+  comment = ''
+  packets = None
+  bytes = None
+
+rule inet filter input handle 19
+  num = 7
+  order = 8
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = 'tcp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'ip saddr . tcp dport { 10.0.0.1 . 80 }'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 20
+  num = 8
+  order = 9
+  hook = 'input'
+  target = 'QUEUE'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'flags bypass to 0-3'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 21
+  num = 9
+  order = 10
+  hook = 'input'
+  target = 'DROP'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'log prefix "drop: "'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 22
+  num = 10
+  order = 11
+  hook = 'input'
+  target = 'DROP'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = '2001:db8::/32'
+  daddr = ''
+  options = ''
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 24
+  num = 11
+  order = 12
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = 'tcp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'tcp dport { 80, 443 }'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 25
+  num = 12
+  order = 13
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = 'tcp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'tcp dport 1000-2000'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 26
+  num = 13
+  order = 14
+  hook = 'input'
+  target = 'CONTINUE'
+  proto = ''
+  iif = '!=lo'
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = ''
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 27
+  num = 14
+  order = 15
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'meta mark 1'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter input handle 28
+  num = 15
+  order = 16
+  hook = 'input'
+  target = 'ACCEPT'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'limit rate 10/second burst 5 packets'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter forward handle 29
+  num = 1
+  order = 17
+  hook = 'forward'
+  target = 'helper'
+  proto = ''
+  iif = ''
+  oif = '!=eth0'
+  saddr = ''
+  daddr = '2001:db8::/32'
+  options = ''
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter forward handle 30
+  num = 2
+  order = 18
+  hook = 'forward'
+  target = 'REJECT'
+  proto = 'udp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'udp dport 53 reject-with icmpx type admin-prohibited'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter forward handle 31
+  num = 3
+  order = 19
+  hook = 'forward'
+  target = 'REJECT'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'reject-with icmpx type port-unreachable'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule inet filter output handle 32
+  num = 1
+  order = 20
+  hook = 'output'
+  target = 'ACCEPT'
+  proto = ''
+  iif = ''
+  oif = 'lo'
+  saddr = ''
+  daddr = ''
+  options = ''
+  comment = ''
+  packets = 6
+  bytes = 504
+
+rule ip nat postrouting handle 3
+  num = 1
+  order = 21
+  hook = 'postrouting'
+  target = 'MASQUERADE'
+  proto = ''
+  iif = ''
+  oif = 'eth0'
+  saddr = ''
+  daddr = ''
+  options = 'fully-random'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule ip nat postrouting handle 4
+  num = 2
+  order = 22
+  hook = 'postrouting'
+  target = 'SNAT'
+  proto = ''
+  iif = ''
+  oif = ''
+  saddr = '10.0.0.0/8'
+  daddr = ''
+  options = 'to:192.0.2.1'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule ip nat prerouting handle 5
+  num = 1
+  order = 23
+  hook = 'prerouting'
+  target = 'DNAT'
+  proto = 'tcp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = '192.0.2.1'
+  options = 'tcp dport 80 to:10.0.0.5 persistent'
+  comment = ''
+  packets = 0
+  bytes = 0
+
+rule ip nat prerouting handle 6
+  num = 2
+  order = 24
+  hook = 'prerouting'
+  target = 'REDIRECT'
+  proto = 'tcp'
+  iif = ''
+  oif = ''
+  saddr = ''
+  daddr = ''
+  options = 'tcp dport 8080 to:8080'
+  comment = ''
+  packets = 0
+  bytes = 0

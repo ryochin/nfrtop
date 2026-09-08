@@ -1,0 +1,71 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - v*
+
+# A tag push can be delivered as more than one event, and v0.1.0 was: two runs
+# started a second apart, both created a release for the same tag, and the one
+# whose draft the other deleted failed uploading its assets — the release was
+# left with `nfrtop` but no `nfrtop.sha256`. Serialising per tag means the
+# second run finds the release the first one made and overwrites its assets,
+# which is what `overwrite_files` is for. Not cancelled in progress: a half-
+# uploaded release is the failure being fixed here, not an acceptable outcome.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # Pinned rather than `ubuntu-latest`, for the same reason ci.yml pins it:
+    # the floor this is tested against has no build for the next image.
+    runs-on: ubuntu-24.04
+    steps:
+      # Pinned to commits rather than to moving major tags. This job is handed
+      # a token that can write releases, so what runs here should not be able
+      # to change under a tag that stayed the same.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check that the tag matches __version__
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          src=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' nfrtop.py | head -n1)
+          echo "tag=$tag  __version__=$src"
+          if [ "$tag" != "$src" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match __version__ ($src) in nfrtop.py"
+            exit 1
+          fi
+
+      # The floor, not the runner's default: 3.9 is the version a release is
+      # most likely to have broken, and the one the README promises.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.9"
+
+      - name: Run tests
+        run: python3 test_nfrtop.py
+
+      # Shipped without the extension so that dropping it on PATH gives you
+      # `nfrtop` rather than `nfrtop.py`.
+      - name: Build artifacts
+        run: |
+          cp nfrtop.py nfrtop
+          chmod +x nfrtop
+          sha256sum nfrtop > nfrtop.sha256
+          cat nfrtop.sha256
+
+      # v2 is end-of-life upstream: 2.6.2 is its last release and the project
+      # says outright that it is no longer maintained or supported.
+      - name: Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            nfrtop
+            nfrtop.sha256

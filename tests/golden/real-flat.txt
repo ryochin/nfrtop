@@ -1,0 +1,29 @@
+FAM  CHAIN           NUM HNDL   PKTS    BYTES    PPS       RATE TARGET     PROT IN   OUT    SOURCE                   DEST          OPTIONS
+------------------------------------------------------------------------------------------------------------------------------------------
+inet filter/wan        1    8      0       0B    0.0       0B/s RETURN     tcp  *    *      *                        *             tcp flags syn
+inet filter/helper     1    9      -        -      -          - ACCEPT     *    *    *      *                        *             counter name "hits"
+inet filter/input      1   10     16   1.3KiB    5.0     420B/s ACCEPT     *    lo   *      *                        *
+inet filter/input      2   11      0       0B    0.0       0B/s ACCEPT     *    *    *      *                        *             ct state { established, related }
+inet filter/input      3   12      0       0B    0.0       0B/s DROP       *    *    *      @blocked                 *             /* blocklist */
+inet filter/input      4   14      0       0B    0.0       0B/s ACCEPT     tcp  *    *      { 192.168.1.10, 192.168… *             tcp dport 22
+inet filter/input      5   15      0       0B    0.0       0B/s ACCEPT     icmp *    *      *                        *             icmp type echo-request
+inet filter/input      6   17      -        -      -          - -          *    *    *      *                        *             iifname vmap { eth0 : jump wan, eth1 : jump helper }
+inet filter/input      7   19      0       0B    0.0       0B/s ACCEPT     tcp  *    *      *                        *             ip saddr . tcp dport { 10.0.0.1 . 80 }
+inet filter/input      8   20      0       0B    0.0       0B/s QUEUE      *    *    *      *                        *             flags bypass to 0-3
+inet filter/input      9   21      0       0B    0.0       0B/s DROP       *    *    *      *                        *             log prefix "drop: "
+inet filter/input     10   22      0       0B    0.0       0B/s DROP       *    *    *      2001:db8::/32            *
+inet filter/input     11   24      0       0B    0.0       0B/s ACCEPT     tcp  *    *      *                        *             tcp dport { 80, 443 }
+inet filter/input     12   25      0       0B    0.0       0B/s ACCEPT     tcp  *    *      *                        *             tcp dport 1000-2000
+inet filter/input     13   26      0       0B    0.0       0B/s CONTINUE   *    !=lo *      *                        *
+inet filter/input     14   27      0       0B    0.0       0B/s ACCEPT     *    *    *      *                        *             meta mark 1
+inet filter/input     15   28      0       0B    0.0       0B/s ACCEPT     *    *    *      *                        *             limit rate 10/second burst 5 packets
+inet filter/forward    1   29      0       0B    0.0       0B/s helper     *    *    !=eth0 *                        2001:db8::/32
+inet filter/forward    2   30      0       0B    0.0       0B/s REJECT     udp  *    *      *                        *             udp dport 53 reject-with icmpx type admin-prohibited
+inet filter/forward    3   31      0       0B    0.0       0B/s REJECT     *    *    *      *                        *             reject-with icmpx type port-unreachable
+inet filter/output     1   32     16   1.3KiB    5.0     420B/s ACCEPT     *    *    lo     *                        *
+ip   nat/postrouting   1    3      0       0B    0.0       0B/s MASQUERADE *    *    eth0   *                        *             fully-random
+ip   nat/postrouting   2    4      0       0B    0.0       0B/s SNAT       *    *    *      10.0.0.0/8               *             to:192.0.2.1
+ip   nat/prerouting    1    5      0       0B    0.0       0B/s DNAT       tcp  *    *      *                        192.0.2.1     tcp dport 80 to:10.0.0.5 persistent
+ip   nat/prerouting    2    6      0       0B    0.0       0B/s REDIRECT   tcp  *    *      *                        *             tcp dport 8080 to:8080
+
+25 rules, 23 with anonymous counters | interval 2s

@@ -1,0 +1,64 @@
+table inet filter { # handle 3
+	counter hits { # handle 6
+		packets 0 bytes 0
+	}
+
+	set blocked { # handle 7
+		type ipv4_addr
+		flags interval
+		elements = { 192.0.2.0/24, 198.51.100.0/24,
+			     203.0.113.0/24 }
+	}
+
+	chain wan { # handle 1
+		tcp flags 0x2 counter packets 0 bytes 0 return # handle 8
+	}
+
+	chain helper { # handle 2
+		counter name "hits" accept # handle 9
+	}
+
+	chain input { # handle 3
+		type filter hook input priority 0; policy drop;
+		iifname "lo" counter packets 6 bytes 504 accept # handle 10
+		ct state 0x2,0x4 counter packets 0 bytes 0 accept # handle 11
+		ip saddr @blocked counter packets 0 bytes 0 drop comment "blocklist" # handle 12
+		ip saddr { 192.168.1.10, 192.168.1.11, 192.168.1.12 } tcp dport 22 counter packets 0 bytes 0 accept # handle 14
+		icmp type 8 counter packets 0 bytes 0 accept # handle 15
+		iifname vmap { "eth0" : jump wan, "eth1" : jump helper } # handle 17
+		ip saddr . tcp dport { 10.0.0.1 . 80 } counter packets 0 bytes 0 accept # handle 19
+		counter packets 0 bytes 0 queue flags bypass to 0-3 # handle 20
+		log prefix "drop: " counter packets 0 bytes 0 drop # handle 21
+		ip6 saddr 2001:db8::/32 counter packets 0 bytes 0 drop # handle 22
+		tcp dport { 80, 443 } counter packets 0 bytes 0 accept # handle 24
+		tcp dport 1000-2000 counter packets 0 bytes 0 accept # handle 25
+		iifname != "lo" counter packets 0 bytes 0 continue # handle 26
+		meta mark 0x00000001 counter packets 0 bytes 0 accept # handle 27
+		limit rate 10/second burst 5 packets counter packets 0 bytes 0 accept # handle 28
+	}
+
+	chain forward { # handle 4
+		type filter hook forward priority 0; policy accept;
+		oifname != "eth0" ip6 daddr 2001:db8::/32 counter packets 0 bytes 0 goto helper # handle 29
+		udp dport 53 counter packets 0 bytes 0 reject with icmpx 3 # handle 30
+		counter packets 0 bytes 0 reject # handle 31
+	}
+
+	chain output { # handle 5
+		type filter hook output priority 0; policy accept;
+		oif "lo" counter packets 6 bytes 504 accept # handle 32
+	}
+}
+table ip nat { # handle 4
+	chain postrouting { # handle 1
+		type nat hook postrouting priority 100; policy accept;
+		oifname "eth0" counter packets 0 bytes 0 masquerade fully-random # handle 3
+		ip saddr 10.0.0.0/8 counter packets 0 bytes 0 snat to 192.0.2.1 # handle 4
+	}
+
+	chain prerouting { # handle 2
+		type nat hook prerouting priority -100; policy accept;
+		ip daddr 192.0.2.1 tcp dport 80 counter packets 0 bytes 0 dnat to 10.0.0.5 persistent # handle 5
+		tcp dport 8080 counter packets 0 bytes 0 redirect to :8080 # handle 6
+	}
+}

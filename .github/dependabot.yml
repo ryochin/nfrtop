@@ -1,0 +1,18 @@
+version: 2
+
+updates:
+  # The workflows pin third-party actions to a commit SHA so that naming an
+  # action names the code that will run. A pinned SHA never moves on its own,
+  # which is the point and also the cost: without this file, picking up a fix
+  # would depend on someone remembering to look. Dependabot rewrites the SHA
+  # and the version comment beside it in one PR.
+  #
+  # Not covered: the `ruff==0.16.6` pin inside ci.yml. There is no manifest for
+  # Dependabot to read it out of, so that one is bumped by hand together with
+  # the RUFF variable in Taskfile.yml.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci

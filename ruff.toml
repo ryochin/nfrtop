@@ -1,0 +1,33 @@
+# Standalone rather than a [tool.ruff] table, because nfrtop is a single file
+# with no dependencies and deliberately has no pyproject.toml: there is nothing
+# to build and nothing to install (see README). A ruff.toml configures the
+# linter without claiming the project is a package.
+
+# The floor the README promises, Taskfile.yml names and ci.yml enforces.
+# Move this and you move all four.
+target-version = "py39"
+
+[lint]
+select = [
+    "E",    # pycodestyle
+    "W",
+    "F",    # pyflakes
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "UP",   # a newer Python spells it better - held to the floor above
+    "RUF",
+]
+
+ignore = [
+    # `raise RuntimeError(...)` inside an `except`. Every one of these is a
+    # failure to read the ruleset, and every one is caught by main() and
+    # printed as a single line a person can act on. There is no traceback for
+    # a cause to be attached to, so `from e` would add a word and say nothing.
+    "B904",
+    # `dict(width=60, ...)`. The golden-frame table reads as a list of named
+    # settings, and the keyword form is what makes it read that way.
+    "C408",
+]
+
+# isort is not selected: there is one import block per file here, and the only
+# thing it would change is the PEP 8 blank line before the first statement.

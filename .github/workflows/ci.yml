@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # ruff has an action of its own, but installing it is one line and this
+      # way there is no third-party action to keep pinned beyond the two above.
+      # The version is the one Taskfile.yml pins, so that green here and green
+      # on a laptop mean the same thing. Settings come from ruff.toml.
+      - name: Run ruff
+        run: |
+          pip install ruff==0.16.6
+          ruff check .
+
+  test:
+    # Pinned rather than `ubuntu-latest`. actions/python-versions ships a 3.9
+    # build for 22.04 and 24.04 but not for 26.04, so tracking the latest image
+    # would drop the floor out of the matrix the day GitHub moves it.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # nfrtop has no dependencies, so the only thing worth proving across
+        # versions is that the syntax and stdlib use stay within the floor the
+        # README claims.
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      # Pinned to a commit rather than to a moving major tag: a tag can be
+      # repointed, and the whole point of naming a third-party action is to
+      # name the code that will run. The comment says which release it is.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run tests
+        run: python3 test_nfrtop.py
